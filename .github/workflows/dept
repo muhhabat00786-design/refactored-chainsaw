@@ -1,0 +1,52 @@
+name: Windows UI Job (Self-hosted)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-ui:
+    runs-on: [self-hosted, windows, windows-ui]
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show System Info
+        shell: pwsh
+        run: |
+          whoami
+          systeminfo | Select-String "OS Name","OS Version","System Type"
+          Write-Host "Runner is ready for UI tasks."
+
+      # Example: run a GUI app installer or UI automation script
+      - name: Run your UI script
+        shell: pwsh
+        run: |
+          # Put your commands here
+          # Example: start a GUI app (won't show on GitHub-hosted, but will on your VM session)
+          Start-Process "notepad.exe"
+          Start-Sleep -Seconds 10
+          Get-Process notepad
+
+      # Optional: take a screenshot for proof/logs
+      - name: Screenshot desktop
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $path = Join-Path $env:GITHUB_WORKSPACE "desktop.png"
+          $bitmap.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+          $graphics.Dispose()
+          $bitmap.Dispose()
+          Write-Host "Saved screenshot to $path"
+
+      - name: Upload screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-screenshot
+          path: desktop.png
